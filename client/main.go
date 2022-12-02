@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
 type AccountsClient struct {
@@ -19,50 +20,88 @@ func NewAccountsClient(baseUrl string) *AccountsClient {
 	return &AccountsClient{baseUrl + "/v1/organisation/accounts", &http.Client{}}
 }
 
-func Get(accountId string) (*AccountsResponse, error) {
-	if accountId == "" {
-		return nil, errors.New("Invalid account id")
-	}
-
-	requestURL := fmt.Sprintf("http://localhost:%d/v1/organisation/accounts", 8080)
-	res, err := http.Get(requestURL)
+func (c AccountsClient) newRequest(method string, path string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, c.url+path, body)
 	if err != nil {
-		fmt.Printf("error making http request: %s\n", err)
+		return nil, err
 	}
 
-	fmt.Printf("client: got response!\n")
-	fmt.Printf("client: status code: %d\n", res.StatusCode)
-	defer res.Body.Close()
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Date", time.Now().GoString())
 
-	accountsResponse := AccountsResponse{}
-	fmt.Println("Response: ", res.Body)
-	error := readBody(res, &accountsResponse)
-	fmt.Println(accountsResponse)
-	return &accountsResponse, error
+	return req, nil
 }
 
-func post(accountData *AccountData) (*AccountResponse, error) {
+func (c AccountsClient) Fetch(id string) (*AccountData, error) {
+	req, err := c.newRequest("GET", "/"+id, nil)
+	if err != nil {
+		return nil, err
+	}
 
-	requestURL := fmt.Sprintf("http://localhost:%d/v1/organisation/accounts", 8080)
-	res, err := http.Get(requestURL)
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 
-	req := AccountRequest{
+	err = checkStatus(res)
+	if err != nil {
+		return nil, err
+	}
+
+	var account AccountPayload
+	fmt.Println("Response: ", res.Body)
+	error := readBody(res, &account)
+	fmt.Println(account)
+	return account.Data, error
+}
+
+func checkStatus(res *http.Response) error {
+	if res.StatusCode < 400 {
+		return nil
+	}
+
+	var errorBody ErrorData
+	err := readBody(res, &errorBody)
+	if err != nil {
+		return err
+	}
+
+	return errors.New(errorBody.ErrorMessage)
+}
+
+func (c AccountsClient) Create(accountData *AccountData) (*AccountResponse, error) {
+
+	accountRequest := AccountRequest{
 		Data: *accountData,
 	}
 
-	requestBody, err := json.Marshal(req)
+	requestBody, err := json.Marshal(accountRequest)
 	if err != nil {
 		log.Fatalln(err)
 		return nil, err
 	}
 
+	req, err := c.newRequest("POST", "", bytes.NewReader(requestBody))
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = checkStatus(res)
+	if err != nil {
+		return nil, err
+	}
+
 	createRequest := AccountResponse{}
-	createReq, err := http.Post(requestURL, "application/json", bytes.NewBuffer(requestBody))
 
 	defer res.Body.Close()
 
-	fmt.Println("Response: ", createReq.Body)
-	error := json.NewDecoder(createReq.Body).Decode(&createRequest)
+	fmt.Println("Response: ", res.Body)
+	error := json.NewDecoder(res.Body).Decode(&createRequest)
 	fmt.Println(createRequest)
 	return &createRequest, error
 

@@ -2,19 +2,23 @@ package client
 
 import (
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 var (
 	GB                     = "GB"
 	classificationPersonal = "Personal"
+	version                = int64(0)
 )
+
+var client = NewAccountsClient("http://localhost:8080")
+
+var id = uuid.New()
 
 func TestPostAccount(t *testing.T) {
 
 	//GIVEN
-	id := uuid.New()
-
 	var accountDummy = &AccountData{
 		OrganisationID: "eb0bd6f5-c3f5-44b2-b677-acd23cdde73c",
 		ID:             id.String(),
@@ -30,10 +34,11 @@ func TestPostAccount(t *testing.T) {
 			AccountNumber:         "41426818",
 			AccountClassification: &classificationPersonal,
 		},
+		Version: &version,
 	}
 
 	//WHEN
-	accountResponse, err := post(accountDummy)
+	accountResponse, err := client.Create(accountDummy)
 
 	//THEN
 	if err != nil {
@@ -44,23 +49,22 @@ func TestPostAccount(t *testing.T) {
 		t.Errorf("Expected account ID: '%v' but got account ID: '%v'", id.String(), accountResponse.Data.ID)
 	}
 
+	assert.Equal(t, accountDummy, &accountResponse.Data)
+
 }
 
 func TestGetAccount(t *testing.T) {
 
 	//GIVEN
-	id := uuid.New()
 
 	//WHEN
-	accountResponse, err := Get("accountDummy")
+	accountResponse, err := client.Fetch(id.String())
 
 	//THEN
 	if err != nil {
 		t.Errorf("Test request failed with error: '%v'", err.Error())
 	}
 
-	if len(accountResponse.Data) == 0 {
-		t.Errorf("Expected account ID: '%v' but got account ID: '%v'", id.String(), accountResponse.Data)
-	}
+	assert.Equal(t, id.String(), accountResponse.ID)
 
 }
