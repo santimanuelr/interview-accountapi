@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type AccountsClient struct {
@@ -27,7 +27,6 @@ func (c AccountsClient) newRequest(method string, path string, body io.Reader) (
 	}
 
 	req.Header.Add("Accept", "application/vnd.api+json")
-	req.Header.Add("Date", time.Now().GoString())
 
 	return req, nil
 }
@@ -46,11 +45,13 @@ func checkStatus(res *http.Response, responseError error) error {
 		return err
 	}
 
+	defer res.Body.Close()
+
 	return errors.New(errorBody.ErrorMessage)
 }
 
 func (c AccountsClient) Fetch(id string) (*AccountData, error) {
-	req, err := c.newRequest("GET", "/"+id, nil)
+	req, err := c.newRequest("GET", fmt.Sprintf("/%s", id), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -63,9 +64,8 @@ func (c AccountsClient) Fetch(id string) (*AccountData, error) {
 	}
 
 	var account AccountResponse
-	log.Println("Response: ", res.Body)
 	error := readBody(res, &account)
-	log.Println(account)
+	log.Println("Response: ", account)
 	return &account.Data, error
 }
 
@@ -95,11 +95,8 @@ func (c AccountsClient) Create(accountData *AccountData) (*AccountResponse, erro
 
 	createRequest := AccountResponse{}
 
-	defer res.Body.Close()
-
-	log.Println("Response: ", res.Body)
-	error := json.NewDecoder(res.Body).Decode(&createRequest)
-	log.Println(createRequest)
+	error := readBody(res, &createRequest)
+	log.Println("Response: ", createRequest)
 	return &createRequest, error
 }
 
