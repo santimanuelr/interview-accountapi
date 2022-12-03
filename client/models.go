@@ -48,10 +48,6 @@ type AccountAttributes struct {
 	Switched                *bool    `json:"switched,omitempty"`
 }
 
-type AccountPayload struct {
-	Data *AccountData `json:"data"`
-}
-
 type ErrorData struct {
 	ErrorMessage string `json:"error_message"`
 }

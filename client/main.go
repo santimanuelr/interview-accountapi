@@ -39,23 +39,23 @@ func (c AccountsClient) Fetch(id string) (*AccountData, error) {
 	}
 
 	res, err := c.client.Do(req)
+
+	err = checkStatus(res, err)
 	if err != nil {
 		return nil, err
 	}
 
-	err = checkStatus(res)
-	if err != nil {
-		return nil, err
-	}
-
-	var account AccountPayload
+	var account AccountResponse
 	fmt.Println("Response: ", res.Body)
 	error := readBody(res, &account)
 	fmt.Println(account)
-	return account.Data, error
+	return &account.Data, error
 }
 
-func checkStatus(res *http.Response) error {
+func checkStatus(res *http.Response, responseError error) error {
+	if responseError != nil {
+		return responseError
+	}
 	if res.StatusCode < 400 {
 		return nil
 	}
@@ -87,11 +87,8 @@ func (c AccountsClient) Create(accountData *AccountData) (*AccountResponse, erro
 	}
 
 	res, err := c.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
 
-	err = checkStatus(res)
+	err = checkStatus(res, err)
 	if err != nil {
 		return nil, err
 	}
