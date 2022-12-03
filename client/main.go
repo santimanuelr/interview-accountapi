@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -32,26 +32,6 @@ func (c AccountsClient) newRequest(method string, path string, body io.Reader) (
 	return req, nil
 }
 
-func (c AccountsClient) Fetch(id string) (*AccountData, error) {
-	req, err := c.newRequest("GET", "/"+id, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := c.client.Do(req)
-
-	err = checkStatus(res, err)
-	if err != nil {
-		return nil, err
-	}
-
-	var account AccountResponse
-	fmt.Println("Response: ", res.Body)
-	error := readBody(res, &account)
-	fmt.Println(account)
-	return &account.Data, error
-}
-
 func checkStatus(res *http.Response, responseError error) error {
 	if responseError != nil {
 		return responseError
@@ -67,6 +47,26 @@ func checkStatus(res *http.Response, responseError error) error {
 	}
 
 	return errors.New(errorBody.ErrorMessage)
+}
+
+func (c AccountsClient) Fetch(id string) (*AccountData, error) {
+	req, err := c.newRequest("GET", "/"+id, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.client.Do(req)
+
+	err = checkStatus(res, err)
+	if err != nil {
+		return nil, err
+	}
+
+	var account AccountResponse
+	log.Println("Response: ", res.Body)
+	error := readBody(res, &account)
+	log.Println(account)
+	return &account.Data, error
 }
 
 func (c AccountsClient) Create(accountData *AccountData) (*AccountResponse, error) {
@@ -97,11 +97,22 @@ func (c AccountsClient) Create(accountData *AccountData) (*AccountResponse, erro
 
 	defer res.Body.Close()
 
-	fmt.Println("Response: ", res.Body)
+	log.Println("Response: ", res.Body)
 	error := json.NewDecoder(res.Body).Decode(&createRequest)
-	fmt.Println(createRequest)
+	log.Println(createRequest)
 	return &createRequest, error
+}
 
+func (c AccountsClient) Delete(accountData *AccountData) error {
+	version := strconv.FormatInt(*accountData.Version, 10)
+	req, err := c.newRequest("DELETE", "/"+accountData.ID+"?version="+version, nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.client.Do(req)
+
+	return checkStatus(res, err)
 }
 
 func readBody(res *http.Response, v interface{}) error {

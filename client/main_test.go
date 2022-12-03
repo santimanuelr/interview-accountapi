@@ -68,3 +68,21 @@ func TestGetAccount(t *testing.T) {
 	assert.Equal(t, id.String(), accountResponse.ID)
 
 }
+
+func TestDeleteAccount(t *testing.T) {
+
+	//GIVEN
+
+	//WHEN
+	accountResponse, err := client.Fetch(id.String())
+
+	//THEN
+	if err != nil {
+		t.Errorf("Test request failed with error: '%v'", err.Error())
+	}
+
+	err = client.Delete(accountResponse)
+
+	assert.Nil(t, err)
+
+}
