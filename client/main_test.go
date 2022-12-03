@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -85,4 +86,30 @@ func TestDeleteAccount(t *testing.T) {
 
 	assert.Nil(t, err)
 
+}
+
+func TestInvalidIdAccount(t *testing.T) {
+
+	//GIVEN
+	fakeId := "fakeAccountId"
+
+	//WHEN
+	_, err := client.Fetch(fakeId)
+
+	//THEN
+	assert.NotNil(t, err)
+	assert.Equal(t, "id is not a valid uuid", err.Error())
+}
+
+func TestNotFoundAccount(t *testing.T) {
+
+	//GIVEN
+	id = uuid.New()
+
+	//WHEN
+	_, err := client.Fetch(id.String())
+
+	//THEN
+	assert.NotNil(t, err)
+	assert.Equal(t, fmt.Sprintf("record %s does not exist", id.String()), err.Error())
 }
