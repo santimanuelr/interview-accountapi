@@ -13,7 +13,7 @@ var (
 	version                = int64(0)
 )
 
-var client = NewAccountsClient("http://localhost:8080")
+var client = NewAccountsClient("http://accountapi:8080")
 
 var id = uuid.New()
 
